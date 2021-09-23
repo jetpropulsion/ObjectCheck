@@ -164,9 +164,11 @@ begin
 
 	create table utl.ref_change_map(change_map bigint not null constraint PK_ref_change_map_change_map primary key, change_desc nvarchar(max));
 	insert utl.ref_change_map(change_map, change_desc)
-	select cast(m.xx as bigint) as change_map, string_agg(m.change_desc, ', ') as change_desc
+	select cast(m.xx as bigint) as change_map, m1.change_desc
+	--, string_agg(m.change_desc, ', ') as change_desc
 	from #mapping m
-	group by m.xx
+	cross apply ( select stuff((select N',' + m1.change_desc from #mapping as m1 where m1.xx = m.xx for xml path (N'')), 1, 1, N'') as change_desc ) as m1
+	group by m.xx, m1.change_desc
 	order by m.xx
 
 	insert utl.ref_change_map(change_map, change_desc) values (0, N'')	--entry for no changes at value 0
@@ -328,8 +330,14 @@ begin
 	--Create new entries for an object definition not previously encountered
 	insert utl.obj_defs(obj_len, obj_hash, obj_def)
 	select t.obj_len, t.obj_hash, t.obj_def
+	from
+	(
+		select row_number() over (partition by t.obj_len, t.obj_hash, t.obj_def order by t.obj_len) as rn, t.obj_len, t.obj_hash, t.obj_def
 	from #temp_objects as t
 	where t.obj_def_id is null
+	)
+	as t
+	where t.rn = 1
 	set @rows = @@rowcount
 	insert #msgs(txt) values ( concat(N'creating new object definitions, ', @rows, N' rows') );
 
