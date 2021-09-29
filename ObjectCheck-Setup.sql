@@ -393,14 +393,14 @@ begin
 	select
 		t.temp_object_id
 		, c.obj_hist_id
-		, iif(data_id_test.val is not null, 1, 0)
-		+ iif(sch_id_test.val is not null, 2, 0)
-		+ iif(obj_id_test.val is not null, 4, 0)
-		+ iif(created_ts_test.val is not null, 8, 0)
-		+ iif(modified_ts_test.val is not null, 16, 0)
-		+ iif(obj_len_test.val is not null, 32, 0)
-		+ iif(obj_hash_test.val is not null, 64, 0)
-		+ iif(obj_def_test.val is not null, 128, 0)
+		, isnull(data_id_test.val, 0)
+		+ isnull(sch_id_test.val, 0)
+		+ isnull(obj_id_test.val, 0)
+		+ isnull(created_ts_test.val, 0)
+		+ isnull(modified_ts_test.val, 0)
+		+ isnull(obj_len_test.val, 0)
+		+ isnull(obj_hash_test.val, 0)
+		+ isnull(obj_def_test.val, 0)
 	from #temp_objects as t
 	join #temp_latest as i on i.obj_name_id = t.obj_name_id and i.reason_id != @reason_deleted
 	outer apply
@@ -413,14 +413,14 @@ begin
 	as c
 	left join utl.obj_defs as dc on dc.obj_def_id = c.obj_def_id
 	left join utl.obj_defs as dt on dt.obj_def_id = t.obj_def_id
-	outer apply ( select iif(coalesce(dc.obj_len, dt.obj_len) is null or (dt.obj_len = dc.obj_len), null, isnull(dc.obj_len, dt.obj_len)) as val ) as obj_len_test
-	outer apply ( select iif(coalesce(dc.obj_hash, dt.obj_hash) is null or (dt.obj_hash = dc.obj_hash), null, isnull(dc.obj_hash, dt.obj_hash)) as val ) as obj_hash_test
-	outer apply ( select iif(coalesce(dc.obj_def, dt.obj_def) is null or (dt.obj_def = dc.obj_def), null, isnull(dc.obj_def, dt.obj_def)) as val ) as obj_def_test
-	cross apply ( select iif(coalesce(c.data_id, t.data_id) is null or (t.data_id = c.data_id), null, isnull(c.data_id, t.data_id)) as val ) as data_id_test
-	cross apply ( select iif(coalesce(c.sch_id, t.sch_id) is null or (t.sch_id = c.sch_id), null, isnull(c.sch_id, t.sch_id)) as val ) as sch_id_test
-	cross apply ( select iif(coalesce(c.obj_id, t.obj_id) is null or (t.obj_id = c.obj_id), null, isnull(c.obj_id, t.obj_id)) as val ) as obj_id_test
-	cross apply ( select iif(coalesce(c.created_ts, t.created_ts) is null or (t.created_ts = c.created_ts), null, isnull(c.created_ts, t.created_ts)) as val ) as created_ts_test
-	cross apply ( select iif(coalesce(c.modified_ts, t.modified_ts) is null or (t.modified_ts = c.modified_ts), null, isnull(c.modified_ts, t.modified_ts)) as val ) as modified_ts_test
+	outer apply ( select iif(coalesce(c.data_id, t.data_id) is null or (t.data_id = c.data_id), null, 1) as val ) as data_id_test
+	outer apply ( select iif(coalesce(c.sch_id, t.sch_id) is null or (t.sch_id = c.sch_id), null, 2) as val ) as sch_id_test
+	outer apply ( select iif(coalesce(c.obj_id, t.obj_id) is null or (t.obj_id = c.obj_id), null, 4) as val ) as obj_id_test
+	outer apply ( select iif(coalesce(c.created_ts, t.created_ts) is null or (t.created_ts = c.created_ts), null, 8) as val ) as created_ts_test
+	outer apply ( select iif(coalesce(c.modified_ts, t.modified_ts) is null or (t.modified_ts = c.modified_ts), null, 16) as val ) as modified_ts_test
+	outer apply ( select iif(coalesce(dc.obj_len, dt.obj_len) is null or (dt.obj_len = dc.obj_len), null, 32) as val ) as obj_len_test
+	outer apply ( select iif(coalesce(dc.obj_hash, dt.obj_hash) is null or (dt.obj_hash = dc.obj_hash), null, 64) as val ) as obj_hash_test
+	outer apply ( select iif(coalesce(dc.obj_def, dt.obj_def) is null or (dt.obj_def = dc.obj_def), null, 128) as val ) as obj_def_test
 	outer apply ( select iif(coalesce(data_id_test.val, sch_id_test.val, obj_id_test.val, created_ts_test.val, modified_ts_test.val, obj_len_test.val, obj_hash_test.val, obj_def_test.val) is not null, 1, 0) as is_modified ) as test
 	where test.is_modified = 1
 	set @rows = @@rowcount
